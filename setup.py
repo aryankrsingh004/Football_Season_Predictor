@@ -1,0 +1,15 @@
+# setup.py
+from setuptools import setup, find_packages
+
+setup(
+    name="laliga_predictor",
+    version="0.1.0",
+    description="A package to predict LaLiga season outcomes using a Random Forest model.",
+    author="Your Name",
+    packages=find_packages(),
+    install_requires=[
+        "pandas>=1.0.0",
+        "numpy>=1.18.0",
+        "scikit-learn>=0.24.0",
+    ],
+)
