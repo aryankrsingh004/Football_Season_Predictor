@@ -21,7 +21,7 @@ A **Streamlit web app** that predicts the final standings of major European foot
 ---
 
 ## 🛠️ Tech Stack
-- **Python**, **scikit-learn**, **pandas**, **numpy**  
+- **Python**, **scikit-learn**, **pandas**
 - **Streamlit** for UI
   
 ---
@@ -59,8 +59,8 @@ The historical match and season data used in this project is sourced from:
 
 ```bash
 # 1. Clone repo
-git clone <your-repo-url>
-cd <your-repo>
+git clone <https://github.com/aryankrsingh004/Football_Season_Predictor.git>
+cd <Football_Season_Predictor>
 
 # 2. Create virtual environment
 python -m venv venv
