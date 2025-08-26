@@ -1,4 +1,71 @@
-# laliga_predictor/predictor.py
+"""
+Predict the outcome of the 2025/26 LaLiga season using a random
+forest classifier.
+
+This script takes a series of historical LaLiga seasons in CSV
+format, builds summary statistics for each club (points, wins, draws,
+losses, goals for/against and goal difference) and then trains a
+RandomForestClassifier from scikit‑learn to predict the final league
+position of each team in a subsequent season.  The 2025/26 LaLiga
+will include 20 clubs – the 17 sides that remained in the
+division in 2024/25 and three promoted clubs (Levante, Elche
+and Real Oviedo).  Since results from the 2024/25 campaign are not
+yet freely available, the model uses the 2023/24 season as the most
+recent set of training features.  New clubs that did not compete in
+2023/24 are assigned average feature values based on the bottom three
+sides from that season.
+
+The historical match files used by this script can be downloaded from
+the open‑source football csv mirror hosted on GitHub.  Each file
+(`season-1819.csv`, `season-1920.csv`, … `season-2324.csv`) lists
+every LaLiga match in the given season with columns for the
+date, home side, final score (FT), half‑time score (HT) and
+away side.  An example of the first few rows of the
+2019/20 file is shown below:
+
+```
+              Date      HomeTeam      FTHG  FTAG   AwayTeam
+0   Fri Aug 9 2019       Athletic       1     0     Barcelona
+1  Sat Aug 10 2019       Celta Vigo     1     3     Real Madrid
+2  Sat Aug 10 2019       Valencia       1     1     Real Sociedad
+3  Sat Aug 10 2019       Mallorca       2     1     Eibar
+4  Sat Aug 10 2019       Villarreal     4     4     Granada
+```
+
+Each CSV contains 380 matches (20 clubs playing 38 games each).  The
+script parses the final score to determine home and away goals and
+computes win/draw/loss outcomes accordingly.  After summarising the
+season, the teams are sorted by points, goal difference and goals
+scored to derive a final ranking.  For training data, each team’s
+performance statistics from season `n` are used to predict its
+position in season `n+1`.  Teams that enter the league via promotion
+are assigned default feature values representing the average of the
+bottom three clubs from the previous season.
+
+The RandomForestClassifier hyperparameters can be adjusted via the
+constants at the bottom of the script.  By default the model uses
+100 trees, a maximum depth of 8 and a random seed for reproducible
+results.  After training, the script prints the predicted league
+table for 2025/26 along with a comparison to the training periods.
+
+Usage
+-----
+Run the script from a terminal with Python 3.  Ensure that
+`pandas`, `numpy` and `scikit‑learn` are installed.  All required
+CSV files should reside in the same directory as this script or an
+alternate path may be provided via the `season_files` list.
+
+Example:
+
+```
+python predictor.py
+```
+
+The script outputs a predicted ranking of the 20 clubs for the
+2025/26 LaLiga season.
+"""
+
+
 
 import os
 from collections import defaultdict
@@ -11,7 +78,29 @@ from sklearn.preprocessing import StandardScaler
 
 # This function remains unchanged from your original script
 def summarise_season(matches: pd.DataFrame) -> pd.DataFrame:
-    """Summarise a LaLiga season into per-team statistics and final ranking."""
+    """Summarise a LaLiga season into per‑team statistics and final ranking.
+
+    Given a DataFrame of matches with columns `HomeTeam`, `AwayTeam`,
+    `FTHG` (full‑time home goals) and `FTAG` (full‑time away goals),
+    compute the total points, wins, draws, losses, goals for and against
+    and goal difference for each team.  After accumulating statistics,
+    the teams are sorted by points (descending), goal difference (descending)
+    and goals for (descending) to determine the final ranking.
+
+    Parameters
+    ----------
+    matches : DataFrame
+        DataFrame of parsed match results.
+
+    Returns
+    -------
+    DataFrame
+        Summary of the season with one row per team and columns:
+        [`team`, `points`, `wins`, `draws`, `losses`, `goals_for`,
+        `goals_against`, `goal_diff`, `position`].
+    """
+
+
     teams: Dict[str, Dict[str, int]] = defaultdict(lambda: {
         "points": 0, "wins": 0, "draws": 0, "losses": 0,
         "goals_for": 0, "goals_against": 0,
@@ -51,11 +140,46 @@ def summarise_season(matches: pd.DataFrame) -> pd.DataFrame:
 
 # This function is modified to accept promoted teams
 def prepare_training_data(season_files: List[str], promoted_teams: List[str]) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
-    """Prepare training features and labels from a list of LaLiga seasons."""
+    """Prepare training features and labels from a list of LaLiga seasons.
+
+    Given a list of file paths ordered chronologically, compute per‑team
+    statistics for each season and build a dataset where the feature
+    vector for season `n+1` comes from the statistics of season `n`.
+    Teams promoted into LaLiga without previous season statistics are
+    assigned default feature values equal to the average of the bottom
+    three clubs in the prior season.
+
+    Parameters
+    ----------
+    season_files : list of str
+        Paths to season CSV files ordered from oldest to newest.
+
+    Returns
+    -------
+    X_train : DataFrame
+        Feature matrix (numeric) for training.
+    y_train : Series
+        Target series containing league positions (1–20).
+    latest_features : DataFrame
+        Feature matrix for the most recent season in the list (used
+        for prediction).
+    """
+
     season_summaries: Dict[str, pd.DataFrame] = {}
+    # Inside the prepare_training_data function
+
     for file_path in season_files:
         try:
-            raw = pd.read_csv(file_path)
+            # Define only the columns we need for the model
+            columns_to_use = ['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
+            
+            # Use both encoding='latin1' and usecols to robustly read the CSV
+            raw = pd.read_csv(
+                file_path, 
+                encoding='latin1', 
+                usecols=columns_to_use
+            )
+            
             summary = summarise_season(raw)
             season_summaries[file_path] = summary
         except FileNotFoundError:
@@ -106,7 +230,20 @@ def prepare_training_data(season_files: List[str], promoted_teams: List[str]) ->
 
 # This function remains unchanged
 def build_and_train_model(X: pd.DataFrame, y: pd.Series) -> Pipeline:
-    """Create a pipeline that scales features and trains a RandomForest."""
+    """Create a pipeline that scales features and trains a RandomForest.
+
+    Parameters
+    ----------
+    X : DataFrame
+        Training features.
+    y : Series
+        Target positions (1–20).
+
+    Returns
+    -------
+    Pipeline
+        Scikit‑learn pipeline with StandardScaler and RandomForestClassifier.
+    """
     model = Pipeline([
         ("scaler", StandardScaler()),
         ("rf", RandomForestClassifier(
@@ -118,7 +255,25 @@ def build_and_train_model(X: pd.DataFrame, y: pd.Series) -> Pipeline:
 
 # This function remains unchanged
 def predict_league_table(model: Pipeline, features: pd.DataFrame) -> pd.DataFrame:
-    """Predict the LaLiga table ordering for the given features."""
+    """Predict the LaLiga table ordering for the given features.
+
+    Parameters
+    ----------
+    model : Pipeline
+        Trained scikit‑learn pipeline.
+    features : DataFrame
+        Feature rows indexed by team name.
+
+    Returns
+    -------
+    DataFrame
+        Predicted positions sorted from 1 to 20.
+    """
+    # use predicted probabilities to compute an expected finishing
+    # position.  RandomForestClassifier returns a probability
+    # distribution over the 20 possible finishing positions.  By
+    # multiplying each probability by its corresponding class index
+    # (1–20) we obtain an expected (fractional) finishing position.
     probas = model.predict_proba(features)
     classes = model.named_steps["rf"].classes_
     exp_positions = probas.dot(classes)
@@ -131,7 +286,7 @@ def predict_league_table(model: Pipeline, features: pd.DataFrame) -> pd.DataFram
     return prediction_df[["predicted_rank", "team", "expected_position"]]
 
 # New high-level API function
-def predict_season(data_dir: str, prediction_year: int, promoted_teams: List[str]) -> pd.DataFrame:
+def predict_season(data_dir: str, league: str, prediction_year: int, promoted_teams: List[str]) -> pd.DataFrame:
     """
     Trains a model on historical data and predicts the outcome of a given season.
 
@@ -145,12 +300,14 @@ def predict_season(data_dir: str, prediction_year: int, promoted_teams: List[str
     """
     # Generate file paths for all seasons up to the one before the prediction year
     # Example: for prediction_year=2025, we need data up to season-2425.csv
+
+    league_path = os.path.join(data_dir, league)
     season_files = []
     for year in range(2000, prediction_year):
         start_year_short = str(year)[-2:]
         end_year_short = str(year + 1)[-2:]
         filename = f"season-{start_year_short}{end_year_short}.csv"
-        season_files.append(os.path.join(data_dir, filename))
+        season_files.append(os.path.join(league_path, filename))
 
     X_train, y_train, latest_features = prepare_training_data(season_files, promoted_teams)
     model = build_and_train_model(X_train, y_train)

@@ -1,11 +1,10 @@
-# setup.py
 from setuptools import setup, find_packages
 
 setup(
-    name="laliga_predictor",
+    name="soccer-season-predictor",
     version="0.1.0",
     description="A package to predict LaLiga season outcomes using a Random Forest model.",
-    author="Your Name",
+    author="Aryan Singh",
     packages=find_packages(),
     install_requires=[
         "pandas>=1.0.0",
