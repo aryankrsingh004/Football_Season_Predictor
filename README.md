@@ -27,14 +27,29 @@ A **Streamlit web app** that predicts the final standings of major European foot
 ---
 
 ## 📂 Project Structure
-.<br />
-├── data/ # League data (CSV files per season)<br />
-│ ├── laliga/ <br />
-│ └── premier_league/ <br />
-├── predictor/ # Core package (model + processing) <br />
-├── app.py # Streamlit app <br />
-├── setup.py # Package setup <br />
-└── README.md 
+```
+.
+├── app.py                  
+├── data/                   
+    ├── laliga/            
+    └── premier_league/     
+├── predictor/              
+    ├── __init__.py         
+    └── predictor.py        
+├── README.md            
+└── setup.py          
+```
+
+
+---
+
+## 📊 Data Sources  
+
+The historical match and season data used in this project is sourced from:  
+
+- [Spanish LaLiga Dataset (DataHub)](https://datahub.io/core/spanish-la-liga)  
+- [English Premier League Dataset (Football-Data.co.uk)](https://www.football-data.co.uk/englandm.php)  
+
 
 
 
