@@ -59,8 +59,8 @@ The historical match and season data used in this project is sourced from:
 
 ```bash
 # 1. Clone repo
-git clone <https://github.com/aryankrsingh004/Football_Season_Predictor.git>
-cd <Football_Season_Predictor>
+git clone https://github.com/aryankrsingh004/Football_Season_Predictor.git
+cd Football_Season_Predictor
 
 # 2. Create virtual environment
 python -m venv venv
